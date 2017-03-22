@@ -283,32 +283,32 @@ def determine_profile(catalog_cont=None):
 	stackf = np.array(stack[selection[0]:selection[-1]].copy())
 
 	# Define the priors for 1-component fitting
-	## Single, priors
-	Cf_min = -1.0
-	Cf_max = 1.0
-	tau0_r_min = 1e-10
-	tau0_r_max = 20.
-	b_r_min = 20.
-	b_r_max = 450.
-	offset_blue_min = -10.
-	offset_blue_max = 0.
-	offset_red_min = 0.
-	offset_red_max = 10.
-	sigma_min = 1e-10
-	sigma_max = 5.
-	offset_gauss_min = -3.
-	offset_gauss_max = 3.
-
-	priors_abs_fixed = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-	priors_abs_offset_blue = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_blue_max]
-	priors_abs_offset_red = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_red_min, offset_red_max]
-	priors_em_fixed = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-	priors_em_offset = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_red_max]
+    	## Single, priors
+    	Cf_min = -1.0
+    	Cf_max = 1.0
+    	tau0_r_min = 1e-10
+    	tau0_r_max = 20.
+    	b_r_min = 20.
+    	b_r_max = 450.
+    	offset_blue_min = -4.
+    	offset_blue_max = 0.
+    	offset_red_min = 0.
+    	offset_red_max = 4.
+    	sigma_min = 1e-10
+    	sigma_max = 5.
+    	offset_gauss_min = -5.
+    	offset_gauss_max = 5.
 	
-	priors_gauss_abs_fixed = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1]
-	priors_gauss_abs_offset = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1, offset_gauss_min, offset_gauss_max]
-	priors_gauss_em_fixed = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1]
-	priors_gauss_em_offset = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1, offset_gauss_min, offset_gauss_max]
+    	priors_abs_fixed = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
+    	priors_abs_offset_blue = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_blue_max]
+    	priors_abs_offset_red = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_red_min, offset_red_max]
+    	priors_em_fixed = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max]
+    	priors_em_offset = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_red_max]
+    	
+    	priors_gauss_abs_fixed = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1]
+    	priors_gauss_abs_offset = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1, offset_gauss_min, offset_gauss_max]
+    	priors_gauss_em_fixed = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1]
+    	priors_gauss_em_offset = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1, offset_gauss_min, offset_gauss_max]
 
 	# Determine what kind of profile it is:
 	# First, fit a fixed and offset, single, absorption amd emmission component fitting over whole wavelength array
@@ -339,49 +339,78 @@ def determine_profile(catalog_cont=None):
 	dV_abs_offset_gauss = (c*(params_abs_gauss_offset[-1]/nad_r))
 	dV_em_offset_gauss = (c*(params_em_gauss_offset[-1]/nad_r))
 
-	# Determine the type of profile:
-	if ((kparam_abs_blue > 0.) & (kparam_abs_red > 0.)) & (kparam_em_gauss == 0.):
-		profile = 'absorption'
-	elif ((kparam_em > 0.) | (kparam_em_gauss > 0.)) & (kparam_abs_blue == 0.) & (kparam_abs_red == 0.) & (kparam_abs_gauss == 0.):
-		profile = 'emission'
-	elif (kparam_abs_gauss > 0.) & (kparam_em_gauss > 0.):
-		profile = 'pcygni'
-	else:
-		profile = 'unknown'
-
-	parameters = {'loglike_abs_fixed':myloglikeabsfixed, 
-					'loglike_abs_offset_blue':myloglikeabsoffset_blue, 
-					'loglike_abs_offset_red':myloglikeabsoffset_red, 
-					'loglike_em_fixed':myloglikeemfixed,
-					'loglike_em_offset':myloglikeemoffset,
-					'loglike_abs_gauss_fixed':myloglikeabsgauss_fixed,
-					'loglike_abs_gauss_offset':myloglikeabsgauss_offset,
-					'loglike_em_gauss_fixed':myloglikeemgauss_fixed,
-					'loglike_em_gauss_offset':myloglikeemgauss_offset,
-
-					'kparam_abs_blue':kparam_abs_blue,
-					'kparam_abs_red':kparam_abs_red,
-					'kparam_em':kparam_em,
-					'kparam_abs_gauss':kparam_abs_gauss,
-					'kparam_em_gauss':kparam_em_gauss,
-
-					'dV_abs_offset_blue':dV_abs_offset_blue,
-					'dV_abs_offset_red':dV_abs_offset_red,
-					'dV_em_offset':dV_em_offset,
-					'dV_abs_offset_gauss':dV_abs_offset_gauss,
-					'dV_em_offset_gauss':dV_em_offset_gauss}
-
-	fits = {'totalfit_abs_fixed':totalfit_abs_fixed,
-			'totalfit_abs_offset_blue':totalfit_abs_offset_blue,
-			'totalfit_abs_offset_red':totalfit_abs_offset_red,
-			'totalfit_em_fixed':totalfit_em_fixed,
-			'totalfit_em_offset':totalfit_em_offset,
-			'totalfit_abs_gauss_fixed':totalfit_abs_gauss_fixed,
-			'totalfit_abs_gauss_offset':totalfit_abs_gauss_offset,
-			'totalfit_em_gauss_fixed':totalfit_em_gauss_fixed,
-			'totalfit_em_gauss_offset':totalfit_em_gauss_offset}
-
-	return profile, parameters, fits
+	# Determine what kind of profile it is:
+    	# First, fit a fixed and offset, single, absorption amd emmission component fitting over whole wavelength array
+    	totalfit_abs_fixed, params_abs_fixed, myloglikeabsfixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_abs_fixed, profile='fixed')
+    	totalfit_abs_offset_blue, params_abs_offset_blue, myloglikeabsoffset_blue = nad.NaD_quickprofilefit(wavf, resf, errf, priors_abs_offset_blue, profile='offset')
+    	totalfit_abs_offset_red, params_abs_offset_red, myloglikeabsoffset_red = nad.NaD_quickprofilefit(wavf, resf, errf, priors_abs_offset_red, profile='offset')
+    	
+    	totalfit_em_fixed, params_em_fixed, myloglikeemfixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_em_fixed, profile='fixed')
+    	totalfit_em_offset, params_em_offset, myloglikeemoffset = nad.NaD_quickprofilefit(wavf, resf, errf, priors_em_offset, profile='offset')
+	
+    	# Fit double gaussians, in absorption and in emission, for a p-cygni profile 
+    	totalfit_abs_gauss_fixed, params_abs_gauss_fixed, myloglikeabsgauss_fixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_abs_fixed, profile='gaussfixed')
+    	totalfit_abs_gauss_offset, params_abs_gauss_offset, myloglikeabsgauss_offset = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_abs_offset, profile='gaussoffset')
+	
+    	totalfit_em_gauss_fixed, params_em_gauss_fixed, myloglikeemgauss_fixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_em_fixed, profile='gaussfixed')
+    	totalfit_em_gauss_offset, params_em_gauss_offset, myloglikeemgauss_offset = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_em_offset, profile='gaussoffset')
+	
+    	# Compute likelihood ratios and determine velocity shifts
+    	kparam_abs_blue = 2.*(myloglikeabsoffset_blue - myloglikeabsfixed)
+    	kparam_abs_red = 2.*(myloglikeabsoffset_red - myloglikeabsfixed)
+    	kparam_em = 2.*(myloglikeemoffset - myloglikeemfixed)
+    	kparam_abs_gauss = 2.*(myloglikeabsgauss_offset - myloglikeabsgauss_fixed)
+    	kparam_em_gauss = 2.*(myloglikeemgauss_offset - myloglikeemgauss_fixed)
+	
+    	dV_abs_offset_blue = (c*(params_abs_offset_blue[-1]/nad_r))
+    	dV_abs_offset_red = (c*(params_abs_offset_red[-1]/nad_r))
+    	dV_em_offset = (c*(params_em_offset[-1]/nad_r))
+    	dV_abs_offset_gauss = (c*(params_abs_gauss_offset[-1]/nad_r))
+    	dV_em_offset_gauss = (c*(params_em_gauss_offset[-1]/nad_r))
+	
+    	# Determine the type of profile:
+    	if ((kparam_abs_blue != 0.) | (kparam_abs_red != 0.)) & (kparam_em == 0.):
+    	    profile = 'absorption'
+    	elif (kparam_em != 0.) & ((kparam_abs_blue == 0.) & (kparam_abs_red == 0.)):
+    	    profile = 'emission'
+    	elif (kparam_abs_blue != 0.) & (kparam_em != 0.):
+    	    profile = 'pcygni'
+    	else:
+    	    profile = 'unknown'
+	
+    	parameters = {'loglike_abs_fixed':myloglikeabsfixed, 
+    	'loglike_abs_offset_blue':myloglikeabsoffset_blue, 
+    	'loglike_abs_offset_red':myloglikeabsoffset_red, 
+    	'loglike_em_fixed':myloglikeemfixed,
+    	'loglike_em_offset':myloglikeemoffset,
+    	'loglike_abs_gauss_fixed':myloglikeabsgauss_fixed,
+    	'loglike_abs_gauss_offset':myloglikeabsgauss_offset,
+    	'loglike_em_gauss_fixed':myloglikeemgauss_fixed,
+    	'loglike_em_gauss_offset':myloglikeemgauss_offset,
+	
+    	'kparam_abs_blue':kparam_abs_blue,
+    	'kparam_abs_red':kparam_abs_red,
+    	'kparam_em':kparam_em,
+    	'kparam_abs_gauss':kparam_abs_gauss,
+    	'kparam_em_gauss':kparam_em_gauss,
+	
+    	'dV_abs_offset_blue':dV_abs_offset_blue,
+    	'dV_abs_offset_red':dV_abs_offset_red,
+    	'dV_em_offset':dV_em_offset,
+    	'dV_abs_offset_gauss':dV_abs_offset_gauss,
+    	'dV_em_offset_gauss':dV_em_offset_gauss}
+	
+    	fits = {'totalfit_abs_fixed':totalfit_abs_fixed,
+    	'totalfit_abs_offset_blue':totalfit_abs_offset_blue,
+    	'totalfit_abs_offset_red':totalfit_abs_offset_red,
+    	'totalfit_em_fixed':totalfit_em_fixed,
+    	'totalfit_em_offset':totalfit_em_offset,
+    	'totalfit_abs_gauss_fixed':totalfit_abs_gauss_fixed,
+    	'totalfit_abs_gauss_offset':totalfit_abs_gauss_offset,
+    	'totalfit_em_gauss_fixed':totalfit_em_gauss_fixed,
+    	'totalfit_em_gauss_offset':totalfit_em_gauss_offset}
+	
+    	return profile, parameters, fits
 
 
 def detect(profile=None, parameters=None):

@@ -283,32 +283,32 @@ def determine_profile(catalog_cont=None):
 	stackf = np.array(stack[selection[0]:selection[-1]].copy())
 
 	# Define the priors for 1-component fitting
-    	## Single, priors
-    	Cf_min = -1.0
-    	Cf_max = 1.0
-    	tau0_r_min = 1e-10
-    	tau0_r_max = 20.
-    	b_r_min = 20.
-    	b_r_max = 450.
-    	offset_blue_min = -4.
-    	offset_blue_max = 0.
-    	offset_red_min = 0.
-    	offset_red_max = 4.
-    	sigma_min = 1e-10
-    	sigma_max = 5.
-    	offset_gauss_min = -5.
-    	offset_gauss_max = 5.
+	## Single, priors
+	Cf_min = -1.0
+	Cf_max = 1.0
+	tau0_r_min = 1e-10
+	tau0_r_max = 20.
+	b_r_min = 20.
+	b_r_max = 450.
+	offset_blue_min = -4.
+	offset_blue_max = 0.
+	offset_red_min = 0.
+	offset_red_max = 4.
+	sigma_min = 1e-10
+	sigma_max = 5.
+	offset_gauss_min = -5.
+	offset_gauss_max = 5.
 	
-    	priors_abs_fixed = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-    	priors_abs_offset_blue = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_blue_max]
-    	priors_abs_offset_red = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_red_min, offset_red_max]
-    	priors_em_fixed = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-    	priors_em_offset = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_red_max]
-    	
-    	priors_gauss_abs_fixed = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1]
-    	priors_gauss_abs_offset = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1, offset_gauss_min, offset_gauss_max]
-    	priors_gauss_em_fixed = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1]
-    	priors_gauss_em_offset = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1, offset_gauss_min, offset_gauss_max]
+	priors_abs_fixed = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
+	priors_abs_offset_blue = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_blue_max]
+	priors_abs_offset_red = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_red_min, offset_red_max]
+	priors_em_fixed = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max]
+	priors_em_offset = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_red_max]
+	
+	priors_gauss_abs_fixed = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1]
+	priors_gauss_abs_offset = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1, offset_gauss_min, offset_gauss_max]
+	priors_gauss_em_fixed = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1]
+	priors_gauss_em_offset = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1, offset_gauss_min, offset_gauss_max]
 
 	# Determine what kind of profile it is:
 	# First, fit a fixed and offset, single, absorption amd emmission component fitting over whole wavelength array
@@ -318,99 +318,70 @@ def determine_profile(catalog_cont=None):
 	
 	totalfit_em_fixed, params_em_fixed, myloglikeemfixed = NaD_quickprofilefit(wavf, resf, errf, priors_em_fixed, profile='fixed')
 	totalfit_em_offset, params_em_offset, myloglikeemoffset = NaD_quickprofilefit(wavf, resf, errf, priors_em_offset, profile='offset')
-
+	
 	# Fit double gaussians, in absorption and in emission, for a p-cygni profile 
 	totalfit_abs_gauss_fixed, params_abs_gauss_fixed, myloglikeabsgauss_fixed = NaD_quickprofilefit(wavf, resf, errf, priors_gauss_abs_fixed, profile='gaussfixed')
 	totalfit_abs_gauss_offset, params_abs_gauss_offset, myloglikeabsgauss_offset = NaD_quickprofilefit(wavf, resf, errf, priors_gauss_abs_offset, profile='gaussoffset')
-
+	
 	totalfit_em_gauss_fixed, params_em_gauss_fixed, myloglikeemgauss_fixed = NaD_quickprofilefit(wavf, resf, errf, priors_gauss_em_fixed, profile='gaussfixed')
 	totalfit_em_gauss_offset, params_em_gauss_offset, myloglikeemgauss_offset = NaD_quickprofilefit(wavf, resf, errf, priors_gauss_em_offset, profile='gaussoffset')
-
+	
 	# Compute likelihood ratios and determine velocity shifts
 	kparam_abs_blue = 2.*(myloglikeabsoffset_blue - myloglikeabsfixed)
 	kparam_abs_red = 2.*(myloglikeabsoffset_red - myloglikeabsfixed)
 	kparam_em = 2.*(myloglikeemoffset - myloglikeemfixed)
 	kparam_abs_gauss = 2.*(myloglikeabsgauss_offset - myloglikeabsgauss_fixed)
 	kparam_em_gauss = 2.*(myloglikeemgauss_offset - myloglikeemgauss_fixed)
-
+	
 	dV_abs_offset_blue = (c*(params_abs_offset_blue[-1]/nad_r))
 	dV_abs_offset_red = (c*(params_abs_offset_red[-1]/nad_r))
 	dV_em_offset = (c*(params_em_offset[-1]/nad_r))
 	dV_abs_offset_gauss = (c*(params_abs_gauss_offset[-1]/nad_r))
 	dV_em_offset_gauss = (c*(params_em_gauss_offset[-1]/nad_r))
-
-	# Determine what kind of profile it is:
-    	# First, fit a fixed and offset, single, absorption amd emmission component fitting over whole wavelength array
-    	totalfit_abs_fixed, params_abs_fixed, myloglikeabsfixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_abs_fixed, profile='fixed')
-    	totalfit_abs_offset_blue, params_abs_offset_blue, myloglikeabsoffset_blue = nad.NaD_quickprofilefit(wavf, resf, errf, priors_abs_offset_blue, profile='offset')
-    	totalfit_abs_offset_red, params_abs_offset_red, myloglikeabsoffset_red = nad.NaD_quickprofilefit(wavf, resf, errf, priors_abs_offset_red, profile='offset')
-    	
-    	totalfit_em_fixed, params_em_fixed, myloglikeemfixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_em_fixed, profile='fixed')
-    	totalfit_em_offset, params_em_offset, myloglikeemoffset = nad.NaD_quickprofilefit(wavf, resf, errf, priors_em_offset, profile='offset')
 	
-    	# Fit double gaussians, in absorption and in emission, for a p-cygni profile 
-    	totalfit_abs_gauss_fixed, params_abs_gauss_fixed, myloglikeabsgauss_fixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_abs_fixed, profile='gaussfixed')
-    	totalfit_abs_gauss_offset, params_abs_gauss_offset, myloglikeabsgauss_offset = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_abs_offset, profile='gaussoffset')
+	# Determine the type of profile:
+	if ((kparam_abs_blue != 0.) | (kparam_abs_red != 0.)) & (kparam_em == 0.):
+	    profile = 'absorption'
+	elif (kparam_em != 0.) & ((kparam_abs_blue == 0.) & (kparam_abs_red == 0.)):
+	    profile = 'emission'
+	elif (kparam_abs_blue != 0.) & (kparam_em != 0.):
+	    profile = 'pcygni'
+	else:
+	    profile = 'unknown'
 	
-    	totalfit_em_gauss_fixed, params_em_gauss_fixed, myloglikeemgauss_fixed = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_em_fixed, profile='gaussfixed')
-    	totalfit_em_gauss_offset, params_em_gauss_offset, myloglikeemgauss_offset = nad.NaD_quickprofilefit(wavf, resf, errf, priors_gauss_em_offset, profile='gaussoffset')
+	parameters = {'loglike_abs_fixed':myloglikeabsfixed, 
+	'loglike_abs_offset_blue':myloglikeabsoffset_blue, 
+	'loglike_abs_offset_red':myloglikeabsoffset_red, 
+	'loglike_em_fixed':myloglikeemfixed,
+	'loglike_em_offset':myloglikeemoffset,
+	'loglike_abs_gauss_fixed':myloglikeabsgauss_fixed,
+	'loglike_abs_gauss_offset':myloglikeabsgauss_offset,
+	'loglike_em_gauss_fixed':myloglikeemgauss_fixed,
+	'loglike_em_gauss_offset':myloglikeemgauss_offset,
 	
-    	# Compute likelihood ratios and determine velocity shifts
-    	kparam_abs_blue = 2.*(myloglikeabsoffset_blue - myloglikeabsfixed)
-    	kparam_abs_red = 2.*(myloglikeabsoffset_red - myloglikeabsfixed)
-    	kparam_em = 2.*(myloglikeemoffset - myloglikeemfixed)
-    	kparam_abs_gauss = 2.*(myloglikeabsgauss_offset - myloglikeabsgauss_fixed)
-    	kparam_em_gauss = 2.*(myloglikeemgauss_offset - myloglikeemgauss_fixed)
+	'kparam_abs_blue':kparam_abs_blue,
+	'kparam_abs_red':kparam_abs_red,
+	'kparam_em':kparam_em,
+	'kparam_abs_gauss':kparam_abs_gauss,
+	'kparam_em_gauss':kparam_em_gauss,
 	
-    	dV_abs_offset_blue = (c*(params_abs_offset_blue[-1]/nad_r))
-    	dV_abs_offset_red = (c*(params_abs_offset_red[-1]/nad_r))
-    	dV_em_offset = (c*(params_em_offset[-1]/nad_r))
-    	dV_abs_offset_gauss = (c*(params_abs_gauss_offset[-1]/nad_r))
-    	dV_em_offset_gauss = (c*(params_em_gauss_offset[-1]/nad_r))
+	'dV_abs_offset_blue':dV_abs_offset_blue,
+	'dV_abs_offset_red':dV_abs_offset_red,
+	'dV_em_offset':dV_em_offset,
+	'dV_abs_offset_gauss':dV_abs_offset_gauss,
+	'dV_em_offset_gauss':dV_em_offset_gauss}
 	
-    	# Determine the type of profile:
-    	if ((kparam_abs_blue != 0.) | (kparam_abs_red != 0.)) & (kparam_em == 0.):
-    	    profile = 'absorption'
-    	elif (kparam_em != 0.) & ((kparam_abs_blue == 0.) & (kparam_abs_red == 0.)):
-    	    profile = 'emission'
-    	elif (kparam_abs_blue != 0.) & (kparam_em != 0.):
-    	    profile = 'pcygni'
-    	else:
-    	    profile = 'unknown'
+	fits = {'totalfit_abs_fixed':totalfit_abs_fixed,
+	'totalfit_abs_offset_blue':totalfit_abs_offset_blue,
+	'totalfit_abs_offset_red':totalfit_abs_offset_red,
+	'totalfit_em_fixed':totalfit_em_fixed,
+	'totalfit_em_offset':totalfit_em_offset,
+	'totalfit_abs_gauss_fixed':totalfit_abs_gauss_fixed,
+	'totalfit_abs_gauss_offset':totalfit_abs_gauss_offset,
+	'totalfit_em_gauss_fixed':totalfit_em_gauss_fixed,
+	'totalfit_em_gauss_offset':totalfit_em_gauss_offset}
 	
-    	parameters = {'loglike_abs_fixed':myloglikeabsfixed, 
-    	'loglike_abs_offset_blue':myloglikeabsoffset_blue, 
-    	'loglike_abs_offset_red':myloglikeabsoffset_red, 
-    	'loglike_em_fixed':myloglikeemfixed,
-    	'loglike_em_offset':myloglikeemoffset,
-    	'loglike_abs_gauss_fixed':myloglikeabsgauss_fixed,
-    	'loglike_abs_gauss_offset':myloglikeabsgauss_offset,
-    	'loglike_em_gauss_fixed':myloglikeemgauss_fixed,
-    	'loglike_em_gauss_offset':myloglikeemgauss_offset,
-	
-    	'kparam_abs_blue':kparam_abs_blue,
-    	'kparam_abs_red':kparam_abs_red,
-    	'kparam_em':kparam_em,
-    	'kparam_abs_gauss':kparam_abs_gauss,
-    	'kparam_em_gauss':kparam_em_gauss,
-	
-    	'dV_abs_offset_blue':dV_abs_offset_blue,
-    	'dV_abs_offset_red':dV_abs_offset_red,
-    	'dV_em_offset':dV_em_offset,
-    	'dV_abs_offset_gauss':dV_abs_offset_gauss,
-    	'dV_em_offset_gauss':dV_em_offset_gauss}
-	
-    	fits = {'totalfit_abs_fixed':totalfit_abs_fixed,
-    	'totalfit_abs_offset_blue':totalfit_abs_offset_blue,
-    	'totalfit_abs_offset_red':totalfit_abs_offset_red,
-    	'totalfit_em_fixed':totalfit_em_fixed,
-    	'totalfit_em_offset':totalfit_em_offset,
-    	'totalfit_abs_gauss_fixed':totalfit_abs_gauss_fixed,
-    	'totalfit_abs_gauss_offset':totalfit_abs_gauss_offset,
-    	'totalfit_em_gauss_fixed':totalfit_em_gauss_fixed,
-    	'totalfit_em_gauss_offset':totalfit_em_gauss_offset}
-	
-    	return profile, parameters, fits
+	return profile, parameters, fits
 
 
 def detect(profile=None, parameters=None):
@@ -462,20 +433,12 @@ def fit_PyMultinest(priors, wavf, resf, standev, name, samp, galtype):
 			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
 			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
 			cube[2] = cube[2] * (priors[5] - priors[4]) + priors[4]
-		
+        
 		def myloglike_single(cube, ndim, nparams):
-			# u_b1 = ((wavf-nad_b)**2) / (((nad_b*cube[2])/c)**2)
-			# u_r1 = ((wavf-nad_r)**2) / (((nad_r*cube[2])/c)**2)
-			
-			# tau_b1 = cube[1]*np.exp(-u_b1)
-			# tau_r1 = ((cube[1]/2.0)*np.exp(-u_r1))
-			      
-			# totfit = 1.0 - cube[0] + cube[0]*np.exp(-tau_b1-tau_r1)
-			totfit = NaDprofile(wavf, cube, profile='fixed')
-
+			totfit = nad.NaDprofile(wavf, cube, profile='fixed')
 			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
 			return loglike
-		
+        
 		n_params = int(len(priors)/2.)
 		pymultinest.run(myloglike_single, myprior_single, n_params, importance_nested_sampling=False, resume=False, verbose=False, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
 		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
@@ -484,40 +447,38 @@ def fit_PyMultinest(priors, wavf, resf, standev, name, samp, galtype):
 		best_params_err = data['modes'][0]['sigma']
 		return best_params, best_params_err
 
-	elif ((len(priors)/2.) == 7.):
+	elif ((len(priors)/2.) == 6.):
 		def myprior_double(cube, ndim, nparams):
 			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
 			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
+			
 			cube[2] = cube[2] * (priors[5] - priors[4]) + priors[4]
-		
 			cube[3] = cube[3] * (priors[7] - priors[6]) + priors[6]
 			cube[4] = cube[4] * (priors[9] - priors[8]) + priors[8]
 			cube[5] = cube[5] * (priors[11] - priors[10]) + priors[10]
-			cube[6] = cube[6] * (priors[13] - priors[12]) + priors[12]
-		
+        
 		def myloglike_double(cube, ndim, nparams):
-			# u_b1 = ((wavf-nad_b)**2) / (((nad_b*cube[2])/c)**2)
-			# u_r1 = ((wavf-nad_r)**2) / (((nad_r*cube[2])/c)**2)
+			u_b1 = ((wavf-nad_b)**2) / (((nad_b*cube[1])/c)**2)
+			u_r1 = ((wavf-nad_r)**2) / (((nad_r*cube[1])/c)**2)
 			
-			# tau_b1 = cube[1]*np.exp(-u_b1)
-			# tau_r1 = ((cube[1]/2.0)*np.exp(-u_r1))
+			tau_b1 = cube[0]*np.exp(-u_b1)
+			tau_r1 = ((cube[0]/2.0)*np.exp(-u_r1))
 			      
-			# totfit1 = 1.0 - cube[0] + cube[0]*np.exp(-tau_b1-tau_r1)
+			totfit1 = 1.0 - 1.0 + 1.0*np.exp(-tau_b1-tau_r1)
 			
 			
-			# u_b2 = ((wavf-(nad_b+cube[6]))**2) / ((((nad_b+cube[6])*cube[5])/c)**2)
-			# u_r2 = ((wavf-(nad_r+cube[6]))**2) / ((((nad_r+cube[6])*cube[5])/c)**2)
+			u_b2 = ((wavf-(nad_b+cube[5]))**2) / ((((nad_b+cube[5])*cube[4])/c)**2)
+			u_r2 = ((wavf-(nad_r+cube[5]))**2) / ((((nad_r+cube[5])*cube[4])/c)**2)
 			
-			# tau_b2 = cube[4]*np.exp(-u_b2)
-			# tau_r2 = ((cube[4]/2.0)*np.exp(-u_r2))
+			tau_b2 = cube[3]*np.exp(-u_b2)
+			tau_r2 = ((cube[3]/2.0)*np.exp(-u_r2))
 			      
-			# totfit2 = 1.0 - cube[3] + cube[3]*np.exp(-tau_b2-tau_r2)
+			totfit2 = 1.0 - cube[2] + cube[2]*np.exp(-tau_b2-tau_r2)
 			
-			# totfit = totfit1 + totfit2 - 1.0
-			totfit = NaDprofile(wavf, cube, profile='double')
+			totfit = totfit1 + totfit2 - 1.0
 			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
 			return loglike
-		
+        
 		n_params = int(len(priors)/2.)
 		pymultinest.run(myloglike_double, myprior_double, n_params, importance_nested_sampling=False, resume=False, verbose=False, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
 		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
@@ -526,51 +487,49 @@ def fit_PyMultinest(priors, wavf, resf, standev, name, samp, galtype):
 		best_params_err = data['modes'][0]['sigma']
 		return best_params, best_params_err
 
-	elif ((len(priors)/2.) == 8.):
+	elif ((len(priors)/2.) == 10.):
 		def myprior_triple(cube, ndim, nparams):
 			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
 			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
+
 			cube[2] = cube[2] * (priors[5] - priors[4]) + priors[4]
-		
 			cube[3] = cube[3] * (priors[7] - priors[6]) + priors[6]
 			cube[4] = cube[4] * (priors[9] - priors[8]) + priors[8]
 			cube[5] = cube[5] * (priors[11] - priors[10]) + priors[10]
-			cube[6] = cube[6] * (priors[13] - priors[12]) + priors[12]
 
+			cube[6] = cube[6] * (priors[5] - priors[4]) + priors[4]
 			cube[7] = cube[7] * (priors[7] - priors[6]) + priors[6]
 			cube[8] = cube[8] * (priors[9] - priors[8]) + priors[8]
-			cube[9] = cube[9] * (priors[11] - priors[10]) + priors[10]
-			cube[10] = cube[10] * (priors[15] - priors[14]) + priors[14]
-		
+			cube[9] = cube[9] * (priors[19] - priors[18]) + priors[18]
+        
 		def myloglike_triple(cube, ndim, nparams):
-			# u_b1 = ((wavf-nad_b)**2) / (((nad_b*cube[2])/c)**2)
-			# u_r1 = ((wavf-nad_r)**2) / (((nad_r*cube[2])/c)**2)
+			u_b1 = ((wavf-nad_b)**2) / (((nad_b*cube[1])/c)**2)
+			u_r1 = ((wavf-nad_r)**2) / (((nad_r*cube[1])/c)**2)
 			
-			# tau_b1 = cube[1]*np.exp(-u_b1)
-			# tau_r1 = ((cube[1]/2.0)*np.exp(-u_r1))
+			tau_b1 = cube[0]*np.exp(-u_b1)
+			tau_r1 = ((cube[0]/2.0)*np.exp(-u_r1))
 			      
-			# totfit1 = 1.0 - cube[0] + cube[0]*np.exp(-tau_b1-tau_r1)
+			totfit1 = 1.0 - 1.0 + 1.0*np.exp(-tau_b1-tau_r1)
 			
 			
-			# u_b2 = ((wavf-(nad_b+cube[6]))**2) / ((((nad_b+cube[6])*cube[5])/c)**2)
-			# u_r2 = ((wavf-(nad_r+cube[6]))**2) / ((((nad_r+cube[6])*cube[5])/c)**2)
+			u_b2 = ((wavf-(nad_b+cube[5]))**2) / ((((nad_b+cube[5])*cube[4])/c)**2)
+			u_r2 = ((wavf-(nad_r+cube[5]))**2) / ((((nad_r+cube[5])*cube[4])/c)**2)
 			
-			# tau_b2 = cube[4]*np.exp(-u_b2)
-			# tau_r2 = ((cube[4]/2.0)*np.exp(-u_r2))
+			tau_b2 = cube[3]*np.exp(-u_b2)
+			tau_r2 = ((cube[3]/2.0)*np.exp(-u_r2))
 			      
-			# totfit2 = 1.0 - cube[3] + cube[3]*np.exp(-tau_b2-tau_r2)
+			totfit2 = 1.0 - cube[2] + cube[2]*np.exp(-tau_b2-tau_r2)
 
 
-			# u_b3 = ((wavf-(nad_b+cube[10]))**2) / ((((nad_b+cube[10])*cube[9])/c)**2)
-			# u_r3 = ((wavf-(nad_r+cube[10]))**2) / ((((nad_r+cube[10])*cube[9])/c)**2)
+			u_b3 = ((wavf-(nad_b+cube[9]))**2) / ((((nad_b+cube[9])*cube[8])/c)**2)
+			u_r3 = ((wavf-(nad_r+cube[9]))**2) / ((((nad_r+cube[9])*cube[8])/c)**2)
 			
-			# tau_b3 = cube[8]*np.exp(-u_b3)
-			# tau_r3 = ((cube[8]/2.0)*np.exp(-u_r3))
+			tau_b3 = cube[7]*np.exp(-u_b3)
+			tau_r3 = ((cube[7]/2.0)*np.exp(-u_r3))
 			      
-			# totfit3 = 1.0 - cube[7] + cube[7]*np.exp(-tau_b3-tau_r3)
+			totfit3 = 1.0 - cube[6] + cube[6]*np.exp(-tau_b3-tau_r3)
 			
-			# totfit = totfit1 + totfit2 + totfit3 - 2.0
-			totfit = NaDprofile(wavf, cube, profile='triple')
+			totfit = totfit1 + totfit2 + totfit3 - 2.0
 			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
 			return loglike
 		
@@ -642,28 +601,35 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 					## Double, priors
 					Cf_min = 0.
 					Cf_max = 0.5
-					tau0_min_sys = 1e-10
-					tau0_max_sys = 10.0
-					tau0_min_off = 1e-10
-					tau0_max_off = 10.0
+					tau0_min_sys = 1e-5
+					tau0_max_sys = 5.0
+					tau0_min_off = 1e-5
+					tau0_max_off = 5.0
 					b_min_sys = 20.
-					b_max_sys = 450.
+					b_max_sys = 200.
 					b_min_off = 20.
 					b_max_off = 200.
 					if (typ=='outflow'):
-						offset_min = -15.
-						offset_max = 0.
+					    offset_min = -10.
+					    offset_max = 0.
 					if (typ=='inflow'):
-						offset_min = 0.
-						offset_max = 15.
+					    offset_min = 0.
+					    offset_max = 10.
 	
-					priors_double = [Cf_min, 1.0, tau0_min_sys, tau0_max_sys, b_min_sys, b_max_sys, Cf_min, Cf_max, tau0_min_off, tau0_max_off, b_min_off, b_max_off, offset_min, offset_max]
+					priors_double = [tau0_min_sys, tau0_max_sys, b_min_sys, b_max_sys, Cf_min, Cf_max, tau0_min_off, tau0_max_off, b_min_off, b_max_off, offset_min, offset_max]
 					params_double, params_double_err = fit_PyMultinest(priors_double, wavf, resf, errf, name, samp, galtype)
-
+            
 					totalfit_single = NaDprofile(wavf, params_single, profile='fixed')
-					totalfit_double = NaDprofile(wavf, params_double, profile='double')
-					systemicfit_double = NaDprofile(wavf, params_double[0:3], profile='fixed')
-					outflowfit_double = NaDprofile(wavf, params_double[3:], profile='offset')
+					double_params = np.ones(7)
+					double_params[1] = params_double[0]
+					double_params[2] = params_double[1]
+					double_params[3] = params_double[2]
+					double_params[4] = params_double[3]
+					double_params[5] = params_double[4]
+					double_params[6] = params_double[5]
+					totalfit_double = NaDprofile(wavf, double_params, profile='double')
+					systemicfit_double = NaDprofile(wavf, double_params[0:3], profile='fixed')
+					outflowfit_double = NaDprofile(wavf, double_params[3:], profile='offset')
 	
 					nadfitcat = {'wav':wavf, 
 							'spec':stackf, 
@@ -701,33 +667,7 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 	
 					priors_single = [Cf_min, Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
 					params_single, params_single_err = fit_PyMultinest(priors_single, wavf, resf, errf, name, samp, galtype)
-	
-					## Double, priors
-					Cf_min = -0.5
-					Cf_max = 0.
-					tau0_min_sys = 1e-10
-					tau0_max_sys = 10.0
-					tau0_min_off = 1e-10
-					tau0_max_off = 10.0
-					b_min_sys = 20.
-					b_max_sys = 200.
-					b_min_off = 20.
-					b_max_off = 200.
-					if (det=='outflow'):
-						offset_min = -5.
-						offset_max = 0.
-					if (det=='inflow'):
-						offset_min = 0.
-						offset_max = 5.
-	
-					priors_double = [-1., Cf_max, tau0_min_sys, tau0_max_sys, b_min_sys, b_max_sys, Cf_min, Cf_max, tau0_min_off, tau0_max_off, b_min_off, b_max_off, offset_min, offset_max]
-					params_double, params_double_err = fit_PyMultinest(priors_double, wavf, resf, errf, name, samp, galtype)
 
-					totalfit_single = NaDprofile(wavf, params_single, profile='fixed')
-					totalfit_double = NaDprofile(wavf, params_double, profile='double')
-					systemicfit_double = NaDprofile(wavf, params_double[0:3], profile='fixed')
-					outflowfit_double = NaDprofile(wavf, params_double[3:], profile='offset')
-	
 					nadfitcat = {'wav':wavf, 
 							'spec':stackf, 
 							'res':resf, 
@@ -736,12 +676,6 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 							'totalfit_single':totalfit_single,
 							'params_single':params_single,
 							'params_single_err':params_single_err,
-	
-							'totalfit_double':totalfit_double,
-							'systemicfit_double':systemicfit_double,
-							'outflowfit_double':outflowfit_double,
-							'params_double':params_double,
-							'params_double_err':params_double_err,
 							
 							'He_b':He_width}
 

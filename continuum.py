@@ -199,7 +199,8 @@ def fit_continuum(name, samp, galtype, sn_limit=None, adaptive=None, dimension='
 		mask = np.ones_like(wav0)
 		for l in lines:
 			if l == 5893.0:
-				mask[((wav0<=l+7.0) & (wav0>=l-10.0))] = 0.0
+				# mask[((wav0<=l+7.0) & (wav0>=l-10.0))] = 0.0
+				mask[((wav0>5875.67) & (wav0<5910.))] = 0.0
 				continue
 			mask[((wav0<=l+linewidth) & (wav0>=l-linewidth))] = 0.0
 		# Interpolate
@@ -251,8 +252,9 @@ def fit_continuum(name, samp, galtype, sn_limit=None, adaptive=None, dimension='
 				print("FAILED... Trying again.")
 				continue
 			fitted = True
-	
+
 		fit = battisti_full(wav0, *popt)
+		print('Done.')
 
 		continuumfit = {'CB08_fit':fit, 'CB08_params':popt, 'CB08_stack':stack, 'CB08_stack_err':catalog[binning]['stack_err'][indices], 'CB08_wavelength':wav0}
 		catalog_new[binning] = continuumfit
@@ -261,9 +263,9 @@ def fit_continuum(name, samp, galtype, sn_limit=None, adaptive=None, dimension='
 	if (save==True):
 		print('Saving...')
 		if (sn_limit!=None) & (adaptive==True):
-			pickle.dump(catalog_new, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_fitcont_'+name+'_'+dimension+'Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
+			pickle.dump(catalog_new, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_fitcont_'+name+'_'+dimension+'Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
 		else:
-			pickle.dump(catalog_new, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_fitcont_'+name+'_'+dimension+'D_'+samp+'_'+galtype+'.p', 'wb'))
+			pickle.dump(catalog_new, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_fitcont_'+name+'_'+dimension+'D_'+samp+'_'+galtype+'.p', 'wb'))
 		return catalog_new
 	else:
 		return catalog_new

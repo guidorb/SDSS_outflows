@@ -15,7 +15,7 @@ from . import catalogs as cts
 
 nad_b = 5889.951
 nad_r = 5895.924
-hei = 	5875.67
+hei = 5875.67
 c = 3.e5
 
 
@@ -91,28 +91,32 @@ def NaDprofile(wav, cube, profile=None):
 
 def Gaussprofile(wav, cube, profile=None):
 	if (profile=='gaussfixed'):
-		gauss1 = 1.0 + cube[0]*np.exp(-((wav-nad_b)**2.)/(2.*cube[1]**2.)) 
-		gauss2 = 1.0 + cube[2]*np.exp(-((wav-nad_r)**2.)/(2.*cube[1]**2.))
-		totgauss = gauss1 + gauss2 - 1.0
+		# cube_fixed = [amp1, amp2, sigma]
+		gauss1 = 1.0 + cube[0]*np.exp(-((wav-nad_b)**2.)/(2.*cube[1]**2.))
+		gauss2 = 1.0 + cube[0]*np.exp(-((wav-nad_r)**2.)/(2.*cube[1]**2.))
+		totgauss = gauss1 + gauss2 - 1.
 	elif (profile=='gaussoffset'):	
-		gauss1 = 1.0 + cube[0]*np.exp(-((wav-(nad_b+cube[3]))**2.)/(2.*cube[1]**2.)) 
-		gauss2 = 1.0 + cube[2]*np.exp(-((wav-(nad_r+cube[3]))**2.)/(2.*cube[1]**2.))
+		# cube_offset = [amp1, amp2, sigma, lambda_off]
+		gauss1 = 1.0 + cube[0]*np.exp(-((wav-nad_b-cube[2])**2.)/(2.*cube[1]**2.))
+		gauss2 = 1.0 + cube[0]*np.exp(-((wav-nad_r-cube[2])**2.)/(2.*cube[1]**2.)) 
 		totgauss = gauss1 + gauss2 - 1.0
+	elif (profile=='gaussdouble'):
+		# cube_double = [amp1_sys, amp2_sys, sigma_sys, amp1_flow, amp2_flow, sigma_flow, lambda_off]
+		sys = 1.0 + cube[0]*np.exp(-((wav-nad_b)**2.)/(2.*cube[1]**2.)) + cube[0]*np.exp(-((wav-nad_r)**2.)/(2.*cube[1]**2.)) 
+		flow = 1.0 + cube[2]*np.exp(-((wav-nad_b-cube[4])**2.)/(2.*cube[3]**2.)) + cube[2]*np.exp(-((wav-nad_r-cube[4])**2.)/(2.*cube[3]**2.)) 
+		totgauss = sys + flow - 1.0
+	elif (profile=='pcygni'):
+		# cube_pcygni = [amp1_blue, amp2_blue, sigma_blue, lambda_blue, amp1_red, amp2_red, sigma_red, lambda_red]
+		blue = 1.0 + cube[0]*np.exp(-((wav-nad_b-cube[2])**2.)/(2.*cube[1]**2.)) + cube[0]*np.exp(-((wav-nad_r-cube[2])**2.)/(2.*cube[1]**2.))
+		red = 1.0 + cube[3]*np.exp(-((wav-nad_b-cube[5])**2.)/(2.*cube[4]**2.)) + cube[3]*np.exp(-((wav-nad_r-cube[5])**2.)/(2.*cube[4]**2.))
+		totgauss = blue + red - 1.0
 	return totgauss
 
 
 def NaD_quickprofilefit(wav, normalised, standev, priors, profile=None):
 	if (profile=='fixed'):
 		def myloglike_fixed(cube, nparams):
-			# u_b = ((wav-nad_b)**2) / (((nad_b*cube[2])/c)**2)
-			# u_r = ((wav-nad_r)**2) / (((nad_r*cube[2])/c)**2)
-			
-			# tau_b = cube[1]*np.exp(-u_b)
-			# tau_r = ((cube[1]/2.0)*np.exp(-u_r))
-			      
-			# totfit = 1.0 - cube[0] + cube[0]*np.exp(-tau_b-tau_r)
 			totfit = NaDprofile(wav, cube, profile=profile)
-		
 			loglike = -0.5*np.sum(((normalised - totfit)/standev)**2)
 			return loglike
 		
@@ -144,15 +148,7 @@ def NaD_quickprofilefit(wav, normalised, standev, priors, profile=None):
 
 	elif (profile=='offset'):
 		def myloglike_offset(cube, nparams):
-			# u_b = ((wav-(nad_b+cube[3]))**2) / ((((nad_b+cube[3])*cube[2])/c)**2)
-			# u_r = ((wav-(nad_r+cube[3]))**2) / ((((nad_r+cube[3])*cube[2])/c)**2)
-			
-			# tau_b = cube[1]*np.exp(-u_b)
-			# tau_r = ((cube[1]/2.0)*np.exp(-u_r))
-			      
-			# totfit = 1.0 - cube[0] + cube[0]*np.exp(-tau_b-tau_r)
 			totfit = NaDprofile(wav, cube, profile=profile)
-		
 			loglike = -0.5*np.sum(((normalised - totfit)/standev)**2)
 			return loglike
 	
@@ -186,25 +182,19 @@ def NaD_quickprofilefit(wav, normalised, standev, priors, profile=None):
 
 	elif (profile=='gaussfixed'):	
 		def myloglike_doublegaussfixed(cube, nparams):
-			# gauss1 = 1.0 + cube[0]*np.exp(-((wav-nad_b)**2.)/(2.*cube[1]**2.)) 
-			# gauss2 = 1.0 + cube[2]*np.exp(-((wav-nad_r)**2.)/(2.*cube[1]**2.))
-			# totfit = gauss1 + gauss2 - 1.0
 			totfit = Gaussprofile(wav, cube, profile=profile)
-	
 			loglike = -0.5*np.sum(((normalised - totfit)/standev)**2)
 			return loglike
 		
-		parameters_gauss_fixed = [r"Amp1", r"$\sigma$", r"Amp2"]
+		parameters_gauss_fixed = [r"Amp", r"$\sigma$"]
 		n_params_gauss_fixed = len(parameters_gauss_fixed)
 		
 		bounds = [ [priors[0], priors[1]],
-				   [priors[2], priors[3]],
-				   [priors[4], priors[5]],
+				   [priors[2], priors[3]]
 				]		
 		for i in range(750):
 			x0 = [ np.random.uniform(priors[0], priors[1]),
-					np.random.uniform(priors[2], priors[3]),
-					np.random.uniform(priors[4], priors[5]),
+					np.random.uniform(priors[2], priors[3])
 				]
 			res = scipy.optimize.minimize(lambda cube: -myloglike_doublegaussfixed(cube, n_params_gauss_fixed), x0 = x0, bounds=bounds )
 		
@@ -222,27 +212,21 @@ def NaD_quickprofilefit(wav, normalised, standev, priors, profile=None):
 
 	elif (profile=='gaussoffset'):
 		def myloglike_doublegaussoffset(cube, nparams):
-			# gauss1 = 1.0 + cube[0]*np.exp(-((wav-(nad_b+cube[3]))**2.)/(2.*cube[1]**2.)) 
-			# gauss2 = 1.0 + cube[2]*np.exp(-((wav-(nad_r+cube[3]))**2.)/(2.*cube[1]**2.))
-			# totfit = gauss1 + gauss2 - 1.0
 			totfit = Gaussprofile(wav, cube, profile=profile)
-	
 			loglike = -0.5*np.sum(((normalised - totfit)/standev)**2)
 			return loglike
 		
-		parameters_gauss_offset = [r"Amp1", r"$\sigma$", r"Amp2", r"$\Delta\lambda$"]
+		parameters_gauss_offset = [r"Amp", r"$\sigma$", r"$\Delta\lambda$"]
 		n_params_gauss_offset = len(parameters_gauss_offset)
 		
 		bounds = [ [priors[0], priors[1]],
 				   [priors[2], priors[3]],
-				   [priors[4], priors[5]],
-				   [priors[6], priors[7]]
+				   [priors[4], priors[5]]
 				]		
 		for i in range(750):
 			x0 = [ np.random.uniform(priors[0], priors[1]),
 					np.random.uniform(priors[2], priors[3]),
-					np.random.uniform(priors[4], priors[5]),
-					np.random.uniform(priors[6], priors[7])
+					np.random.uniform(priors[4], priors[5])
 				]
 			res = scipy.optimize.minimize(lambda cube: -myloglike_doublegaussoffset(cube, n_params_gauss_offset), x0 = x0, bounds=bounds )
 		
@@ -294,10 +278,12 @@ def determine_profile(catalog_cont=None):
 	offset_blue_max = 0.
 	offset_red_min = 0.
 	offset_red_max = 4.
-	sigma_min = 1e-10
+	sigma_min = 1e-5
 	sigma_max = 5.
 	offset_gauss_min = -5.
 	offset_gauss_max = 5.
+	amp_min = 0.
+	amp_max = 1.0
 	
 	priors_abs_fixed = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
 	priors_abs_offset_blue = [0., Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_blue_max]
@@ -305,10 +291,10 @@ def determine_profile(catalog_cont=None):
 	priors_em_fixed = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max]
 	priors_em_offset = [Cf_min, 0., tau0_r_min, tau0_r_max, b_r_min, b_r_max, offset_blue_min, offset_red_max]
 	
-	priors_gauss_abs_fixed = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1]
-	priors_gauss_abs_offset = [0.0, -0.1, sigma_min, sigma_max, 0.0, -0.1, offset_gauss_min, offset_gauss_max]
-	priors_gauss_em_fixed = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1]
-	priors_gauss_em_offset = [0.0, 0.1, sigma_min, sigma_max, 0.0, 0.1, offset_gauss_min, offset_gauss_max]
+	priors_gauss_abs_fixed = [-amp_max, 0., sigma_min, sigma_max]
+	priors_gauss_abs_offset = [-amp_max, 0., sigma_min, sigma_max, offset_gauss_min, offset_gauss_max]
+	priors_gauss_em_fixed = [amp_min, amp_max, sigma_min, sigma_max]
+	priors_gauss_em_offset = [amp_min, amp_max, sigma_min, sigma_max, offset_gauss_min, offset_gauss_max]
 
 	# Determine what kind of profile it is:
 	# First, fit a fixed and offset, single, absorption amd emmission component fitting over whole wavelength array
@@ -402,23 +388,23 @@ def detect(profile=None, parameters=None):
 			typ = 'non-detection'
 
 	if (profile == 'emission'):
-		if ((parameters['kparam_em'] >= kparam_lim) & (abs(parameters['dV_em_offset']) >= deltaV_lim) & (parameters['dV_em_offset'] > 0)):
-			detection = True
-			typ = 'inflow'
-		elif ((parameters['kparam_em'] >= kparam_lim) & (abs(parameters['dV_em_offset']) >= deltaV_lim) & (parameters['dV_em_offset'] < 0)):
+		if ((parameters['kparam_em_gauss'] >= kparam_lim) & (abs(parameters['dV_em_offset_gauss']) >= deltaV_lim) & (parameters['dV_em_offset_gauss'] > 0)):
 			detection = True
 			typ = 'outflow'
+		elif ((parameters['kparam_em_gauss'] >= kparam_lim) & (abs(parameters['dV_em_offset_gauss']) >= deltaV_lim) & (parameters['dV_em_offset_gauss'] < 0)):
+			detection = True
+			typ = 'inflow'
 		else:
 			detection = False
 			typ = 'non-detection'
 
 	if (profile == 'pcygni'):
-		if (parameters['kparam_abs_gauss'] >= kparam_lim) & (parameters['kparam_em_gauss'] >= kparam_lim):
-			detection = True
-			typ = 'outflow'
-		else:
-			detection = False
-			typ = 'non-detection'
+		# if (parameters['kparam_abs_gauss'] >= kparam_lim) & (parameters['kparam_em_gauss'] >= kparam_lim):
+		detection = True
+		typ = 'outflow'
+		# else:
+		# 	detection = False
+		# 	typ = 'non-detection'
 
 	if (profile == 'unknown'):
 		detection = False
@@ -427,27 +413,33 @@ def detect(profile=None, parameters=None):
 	return detection, typ
 
 
-def fit_PyMultinest(priors, wavf, resf, standev, name, samp, galtype):
-	if ((len(priors)/2.) == 3.):
+def fit_PyMultinest(priors, wavf, resf, standev, name, samp, galtype, fitstyle=None):
+	if fitstyle=='nadfixed':
 		def myprior_single(cube, ndim, nparams):
 			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
 			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
-			cube[2] = cube[2] * (priors[5] - priors[4]) + priors[4]
         
 		def myloglike_single(cube, ndim, nparams):
-			totfit = nad.NaDprofile(wavf, cube, profile='fixed')
+			u_b1 = ((wavf-nad_b)**2) / (((nad_b*cube[1])/c)**2)
+			u_r1 = ((wavf-nad_r)**2) / (((nad_r*cube[1])/c)**2)
+			
+			tau_b1 = cube[0]*np.exp(-u_b1)
+			tau_r1 = ((cube[0]/2.0)*np.exp(-u_r1))
+			      
+			totfit = 1.0 - 1.0 + 1.0*np.exp(-tau_b1-tau_r1)
+			# totfit = NaDprofile(wavf, cube, profile='fixed')
 			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
 			return loglike
         
-		n_params = int(len(priors)/2.)
-		pymultinest.run(myloglike_single, myprior_single, n_params, importance_nested_sampling=False, resume=False, verbose=False, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
-		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		n_params = 2
+		pymultinest.run(myloglike_single, myprior_single, n_params, importance_nested_sampling=False, resume=False, verbose=True, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
 		data = analysis.get_mode_stats()
 		best_params = data['modes'][0]['maximum a posterior']
 		best_params_err = data['modes'][0]['sigma']
 		return best_params, best_params_err
 
-	elif ((len(priors)/2.) == 6.):
+	elif fitstyle=='naddouble':
 		def myprior_double(cube, ndim, nparams):
 			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
 			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
@@ -479,15 +471,15 @@ def fit_PyMultinest(priors, wavf, resf, standev, name, samp, galtype):
 			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
 			return loglike
         
-		n_params = int(len(priors)/2.)
-		pymultinest.run(myloglike_double, myprior_double, n_params, importance_nested_sampling=False, resume=False, verbose=False, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
-		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		n_params = 6
+		pymultinest.run(myloglike_double, myprior_double, n_params, importance_nested_sampling=False, resume=False, verbose=True, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
 		data = analysis.get_mode_stats()
 		best_params = data['modes'][0]['maximum a posterior']
 		best_params_err = data['modes'][0]['sigma']
 		return best_params, best_params_err
 
-	elif ((len(priors)/2.) == 10.):
+	elif fitstyle=='nadtriple':
 		def myprior_triple(cube, ndim, nparams):
 			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
 			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
@@ -533,9 +525,78 @@ def fit_PyMultinest(priors, wavf, resf, standev, name, samp, galtype):
 			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
 			return loglike
 		
-		n_params = int((len(priors)/2.)+3)
-		pymultinest.run(myloglike_triple, myprior_triple, n_params, importance_nested_sampling=False, resume=False, verbose=False, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
-		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/GoogleDrive/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		n_params = 10
+		pymultinest.run(myloglike_triple, myprior_triple, n_params, importance_nested_sampling=False, resume=False, verbose=True, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		data = analysis.get_mode_stats()
+		best_params = data['modes'][0]['maximum a posterior']
+		best_params_err = data['modes'][0]['sigma']
+		return best_params, best_params_err
+
+	elif fitstyle=='gaussfixed':
+		def myprior_gaussfixed(cube, ndim, nparams):
+			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
+			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
+
+		def myloglike_gaussfixed(cube, ndim, nparams):
+			gauss1 = 1.0 + cube[0]*np.exp(-((wavf-nad_b)**2.)/(2.*cube[1]**2.))
+			gauss2 = 1.0 + cube[0]*np.exp(-((wavf-nad_r)**2.)/(2.*cube[1]**2.))
+			totfit = gauss1 + gauss2 - 1.0
+			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
+			return loglike
+        
+		n_params = 2
+		pymultinest.run(myloglike_gaussfixed, myprior_gaussfixed, n_params, importance_nested_sampling=False, resume=False, verbose=True, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		data = analysis.get_mode_stats()
+		best_params = data['modes'][0]['maximum a posterior']
+		best_params_err = data['modes'][0]['sigma']
+		return best_params, best_params_err
+
+	elif fitstyle=='gaussdouble':
+		def myprior_doublegauss(cube, ndim, nparams):
+			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
+			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
+			
+			cube[2] = cube[2] * (priors[1] - priors[0]) + priors[0]
+			cube[3] = cube[3] * (priors[3] - priors[2]) + priors[2]
+			cube[4] = cube[4] * (priors[5] - priors[4]) + priors[4]
+
+		def myloglike_doublegauss(cube, ndim, nparams):
+			systemic = 1.0 + cube[0]*np.exp(-((wavf-nad_b)**2.)/(2.*cube[1]**2.)) + cube[0]*np.exp(-((wavf-nad_r)**2.)/(2.*cube[1]**2.)) 
+			offset = 1.0 + cube[2]*np.exp(-((wavf-nad_b-cube[4])**2.)/(2.*cube[3]**2.)) + cube[2]*np.exp(-((wavf-nad_r-cube[4])**2.)/(2.*cube[3]**2.)) 
+			totfit = systemic + offset - 1.0
+			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
+			return loglike
+        
+		n_params = 5
+		pymultinest.run(myloglike_doublegauss, myprior_doublegauss, n_params, importance_nested_sampling=False, resume=False, verbose=True, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		data = analysis.get_mode_stats()
+		best_params = data['modes'][0]['maximum a posterior']
+		best_params_err = data['modes'][0]['sigma']
+		return best_params, best_params_err
+
+	elif fitstyle=='pcygni':
+		def myprior_pcygni(cube, ndim, nparams):
+			cube[0] = cube[0] * (priors[1] - priors[0]) + priors[0]
+			cube[1] = cube[1] * (priors[3] - priors[2]) + priors[2]
+			cube[2] = cube[2] * (priors[5] - priors[4]) + priors[4]
+			
+			cube[3] = cube[3] * (priors[7] - priors[6]) + priors[6]
+			cube[4] = cube[4] * (priors[9] - priors[8]) + priors[8]
+			cube[5] = cube[5] * (priors[11] - priors[10]) + priors[10]
+
+		def myloglike_pcygni(cube, ndim, nparams):
+			blue = 1.0 + cube[0]*np.exp(-((wavf-nad_b-cube[2])**2.)/(2.*cube[1]**2.)) + cube[0]*np.exp(-((wavf-nad_r-cube[2])**2.)/(2.*cube[1]**2.))
+			red = 1.0 + cube[3]*np.exp(-((wavf-nad_b-cube[5])**2.)/(2.*cube[4]**2.)) + cube[3]*np.exp(-((wavf-nad_r-cube[5])**2.)/(2.*cube[4]**2.)) 
+			totfit = blue + red - 1.0
+			loglike = -0.5*np.sum(((resf - totfit)/standev)**2)
+			return loglike
+        
+		n_params = 6
+		pymultinest.run(myloglike_pcygni, myprior_pcygni, n_params, importance_nested_sampling=False, resume=False, verbose=True, sampling_efficiency='model', n_live_points=750, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
+		analysis = pymultinest.Analyzer(n_params = n_params, outputfiles_basename='/Users/guidorb/Dropbox/SDSS/Bayesian/Bayesian_fit1-'+name+'_'+samp+'_'+galtype)
 		data = analysis.get_mode_stats()
 		best_params = data['modes'][0]['maximum a posterior']
 		best_params_err = data['modes'][0]['sigma']
@@ -552,9 +613,15 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 		for binning in catalog_stack['bins']:
 			if 'CB08_stack' in catalog[binning]:
 				print(binning + '/' + str(np.size(catalog_stack['bins'])) + '      NaD fitting...')
+				sn_ratio = catalog_stack[binning]['S/N_ratio']
+				if sn_ratio < 100.:
+					nadfitcat = {'INSUFFICIENT SN-RATIO'}
+					catalog_new[binning] = nadfitcat
+					continue
 
 				profiletype, parameters, fits = determine_profile(catalog_cont=catalog[binning])
 				det, typ = detect(profile=profiletype, parameters=parameters)
+				print(profiletype, det)
 
 				# Prepare arrays to be fit and apply a correction factor to normalise continuum to 1.
 				wav0 = catalog[binning]['CB08_wavelength']
@@ -578,26 +645,7 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 				stackf = np.array(stack[selection[0]:selection[-1]].copy())	
 				He_width = np.sqrt(2.)*(catalog[binning]['CB08_params'][81]/nad_r)*c
 
-				if (profiletype=='absorption') & (det==True) & ((typ=='outflow') | (typ=='inflow')):
-					## Single, priors
-					Cf_min = 0
-					Cf_max = 1.
-					tau0_r_min = 1e-10
-					tau0_r_max = 20.
-					b_r_min = 20.
-					b_r_max = 450.
-					offset_blue_min = -10.
-					offset_blue_max = 0.
-					offset_red_min = 0.
-					offset_red_max = 10.
-					sigma_min = 1e-10
-					sigma_max = 10.
-					offset_gauss_min = -3.
-					offset_gauss_max = 3.
-	
-					priors_single = [Cf_min, Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-					params_single, params_single_err = fit_PyMultinest(priors_single, wavf, resf, errf, name, samp, galtype)
-	
+				if (profiletype=='absorption') & (det==True):
 					## Double, priors
 					Cf_min = 0.
 					Cf_max = 0.5
@@ -617,9 +665,8 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 					    offset_max = 10.
 	
 					priors_double = [tau0_min_sys, tau0_max_sys, b_min_sys, b_max_sys, Cf_min, Cf_max, tau0_min_off, tau0_max_off, b_min_off, b_max_off, offset_min, offset_max]
-					params_double, params_double_err = fit_PyMultinest(priors_double, wavf, resf, errf, name, samp, galtype)
-            
-					totalfit_single = NaDprofile(wavf, params_single, profile='fixed')
+					params_double, params_double_err = fit_PyMultinest(priors_double, wavf, resf, errf, name, samp, galtype, fitstyle='naddouble')
+
 					double_params = np.ones(7)
 					double_params[1] = params_double[0]
 					double_params[2] = params_double[1]
@@ -635,10 +682,12 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 							'spec':stackf, 
 							'res':resf, 
 							'errs':errf,
-	
-							'totalfit_single':totalfit_single,
-							'params_single':params_single,
-							'params_single_err':params_single_err,
+							'fits':fits,
+							'parameters':parameters,
+
+							'profiletype':profiletype,
+							'det':det,
+							'typ':typ,
 	
 							'totalfit_double':totalfit_double,
 							'systemicfit_double':systemicfit_double,
@@ -648,63 +697,64 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 							
 							'He_b':He_width}
 
-				elif (profiletype=='emission') & (det==True) & ((typ=='outflow') | (typ=='inflow')):
-					## Single, priors
-					Cf_min = -1.
-					Cf_max = 0
-					tau0_r_min = 1e-10
-					tau0_r_max = 20.
-					b_r_min = 20.
-					b_r_max = 450.
-					offset_blue_min = -10.
-					offset_blue_max = 0.
-					offset_red_min = 0.
-					offset_red_max = 10.
-					sigma_min = 1e-10
-					sigma_max = 10.
-					offset_gauss_min = -3.
-					offset_gauss_max = 3.
-	
-					priors_single = [Cf_min, Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-					params_single, params_single_err = fit_PyMultinest(priors_single, wavf, resf, errf, name, samp, galtype)
+				elif (profiletype=='emission') & (det==True):
+					sigma_min = 1e-5
+					sigma_max = 5.
+					offset_gauss_min = -5.
+					offset_gauss_max = 5.
+					amps_min = 0.
+					amps_max = 1.0
+					priors_gauss_em_double = [amps_min, amps_max, sigma_min, sigma_max, offset_gauss_min, offset_gauss_max]
+
+					params_double, params_double_err = fit_PyMultinest(priors_gauss_em_double, wavf, resf, errf, name, samp, galtype, fitstyle='gaussdouble')
+					totalfit_double = Gaussprofile(wavf, params_double, profile='gaussdouble')
+					systemicfit_double = Gaussprofile(wavf, params_double[0:2], profile='gaussfixed')
+					outflowfit_double = Gaussprofile(wavf, params_double[2:], profile='gaussoffset')
 
 					nadfitcat = {'wav':wavf, 
 							'spec':stackf, 
 							'res':resf, 
 							'errs':errf,
-	
-							'totalfit_single':totalfit_single,
-							'params_single':params_single,
-							'params_single_err':params_single_err,
+							'fits':fits,
+							'parameters':parameters,
+
+							'profiletype':profiletype,
+							'det':det,
+							'typ':typ,
+
+							'totalfit_double':totalfit_double,
+							'systemicfit_double':systemicfit_double,
+							'outflowfit_double':outflowfit_double,
+							'params_double':params_double,
+							'params_double_err':params_double_err,
 							
 							'He_b':He_width}
 
 				elif (profiletype=='absorption') & (det==False):
 					## Single, priors
-					Cf_min = 0.
-					Cf_max = 1.
-					tau0_r_min = 1e-10
+					tau0_r_min = 1e-5
 					tau0_r_max = 20.
 					b_r_min = 20.
 					b_r_max = 450.
-					offset_blue_min = -10.
-					offset_blue_max = 0.
-					offset_red_min = 0.
-					offset_red_max = 10.
-					sigma_min = 1e-10
-					sigma_max = 10.
-					offset_gauss_min = -3.
-					offset_gauss_max = 3.
 	
-					priors_single = [Cf_min, Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-					params_single, params_single_err = fit_PyMultinest(priors_single, wavf, resf, errf, name, samp, galtype)
+					priors_single = [tau0_r_min, tau0_r_max, b_r_min, b_r_max]
+					params_single, params_single_err = fit_PyMultinest(priors_single, wavf, resf, errf, name, samp, galtype, fitstyle='nadfixed')
 					
-					totalfit_single = NaDprofile(wavf, params_single, profile='fixed')
+					single_params = np.ones(3)
+					single_params[1] = params_single[0]
+					single_params[2] = params_single[1]
+					totalfit_single = NaDprofile(wavf, single_params, profile='fixed')
 
 					nadfitcat = {'wav':wavf, 
 							'spec':stackf, 
 							'res':resf, 
 							'errs':errf,
+							'fits':fits,
+							'parameters':parameters,
+
+							'profiletype':profiletype,
+							'det':det,
+							'typ':typ,
 	
 							'totalfit_single':totalfit_single,
 							'params_single':params_single,
@@ -713,81 +763,121 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 							'He_b':He_width}
 
 				elif (profiletype=='emission') & (det==False):
-					## Single, priors
-					Cf_min = -1.
-					Cf_max = 0
-					tau0_r_min = 1e-10
-					tau0_r_max = 20.
-					b_r_min = 20.
-					b_r_max = 450.
-					offset_blue_min = -10.
-					offset_blue_max = 0.
-					offset_red_min = 0.
-					offset_red_max = 10.
-					sigma_min = 1e-10
-					sigma_max = 10.
-					offset_gauss_min = -3.
-					offset_gauss_max = 3.
+					sigma_min = 1e-5
+					sigma_max = 5.
+					amps_min = 0.
+					amps_max = 1.0
+					priors_gauss_em_single = [amps_min, amps_max, sigma_min, sigma_max]
 	
-					priors_single = [Cf_min, Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-					params_single, params_single_err = fit_PyMultinest(priors_single, wavf, resf, errf, name, samp, galtype)
-					
-					totalfit_single = NaDprofile(wavf, params_single, profile='fixed')
+					params_single, params_single_err = fit_PyMultinest(priors_gauss_em_single, wavf, resf, errf, name, samp, galtype, fitstyle='gaussfixed')
+					totalfit_single = Gaussprofile(wavf, params_single, profile='gaussfixed')
 
 					nadfitcat = {'wav':wavf, 
 							'spec':stackf, 
 							'res':resf, 
 							'errs':errf,
-	
+							'fits':fits,
+							'parameters':parameters,
+
+							'profiletype':profiletype,
+							'det':det,
+							'typ':typ,
+
 							'totalfit_single':totalfit_single,
 							'params_single':params_single,
 							'params_single_err':params_single_err,
-	
+							
 							'He_b':He_width}
 
 				elif (profiletype=='pcygni'):
-					continue
-
-				elif (profiletype=='unknown'):
-					## Single, priors
-					Cf_min = -1.
-					Cf_max = 1.
-					tau0_r_min = 1e-10
-					tau0_r_max = 20.
-					b_r_min = 20.
-					b_r_max = 450.
-					offset_blue_min = -10.
-					offset_blue_max = 0.
-					offset_red_min = 0.
-					offset_red_max = 10.
-					sigma_min = 1e-10
+					sigma_min = 1e-5
 					sigma_max = 10.
-					offset_gauss_min = -3.
-					offset_gauss_max = 3.
+					offset_gauss_min = -5.
+					offset_gauss_max = 5.
+					amps_min = 0.
+					amps_max = 0.1
+					amps_blue = 1.-resf[(wavf > 5880.) & (wavf < 5905.)].min()
+					priors_pcygni = [-amps_blue, amps_min, sigma_min, sigma_max, offset_gauss_min, 0., amps_min, amps_max, sigma_min, sigma_max, 0., offset_gauss_max]
 	
-					priors_single = [Cf_min, Cf_max, tau0_r_min, tau0_r_max, b_r_min, b_r_max]
-					params_single, params_single_err = fit_PyMultinest(priors_single, wavf, resf, errf, name, samp, galtype)
-					
-					totalfit_single = NaDprofile(wavf, params_single, profile='fixed')
+					params_pcygni, params_pcygni_err = fit_PyMultinest(priors_pcygni, wavf, resf, errf, name, samp, galtype, fitstyle='pcygni')
+					totalfit_pcygni = Gaussprofile(wavf, params_pcygni, profile='pcygni')
+					bluefit_pcygni = Gaussprofile(wavf, params_pcygni[0:3], profile='gaussoffset')
+					redfit_pcygni = Gaussprofile(wavf, params_pcygni[3:], profile='gaussoffset')
 
 					nadfitcat = {'wav':wavf, 
 							'spec':stackf, 
 							'res':resf, 
 							'errs':errf,
+							'fits':fits,
+							'parameters':parameters,
+
+							'profiletype':profiletype,
+							'det':det,
+							'typ':typ,
+
+							'totalfit_pcygni':totalfit_pcygni,
+							'bluefit_pcygni':bluefit_pcygni,
+							'redfit_pcygni':redfit_pcygni,
+							'params_pcygni':params_pcygni,
+							'params_pcygni_err':params_pcygni_err,
+							
+							'He_b':He_width}
+
+				elif (profiletype=='unknown'):
+					## Double, priors
+					Cf_min = 0.
+					Cf_max = 0.5
+					tau0_min_sys = 1e-5
+					tau0_max_sys = 5.0
+					tau0_min_off = 1e-5
+					tau0_max_off = 5.0
+					b_min_sys = 20.
+					b_max_sys = 200.
+					b_min_off = 20.
+					b_max_off = 200.
+					offset_min = -10.
+					offset_max = 10.
 	
-							'totalfit_single':totalfit_single,
-							'params_single':params_single,
-							'params_single_err':params_single_err,
+					priors_double = [tau0_min_sys, tau0_max_sys, b_min_sys, b_max_sys, Cf_min, Cf_max, tau0_min_off, tau0_max_off, b_min_off, b_max_off, offset_min, offset_max]
+					params_double, params_double_err = fit_PyMultinest(priors_double, wavf, resf, errf, name, samp, galtype, fitstyle='naddouble')
+
+					double_params = np.ones(7)
+					double_params[1] = params_double[0]
+					double_params[2] = params_double[1]
+					double_params[3] = params_double[2]
+					double_params[4] = params_double[3]
+					double_params[5] = params_double[4]
+					double_params[6] = params_double[5]
+					totalfit_double = NaDprofile(wavf, double_params, profile='double')
+					systemicfit_double = NaDprofile(wavf, double_params[0:3], profile='fixed')
+					outflowfit_double = NaDprofile(wavf, double_params[3:], profile='offset')
 	
+					nadfitcat = {'wav':wavf, 
+							'spec':stackf, 
+							'res':resf, 
+							'errs':errf,
+							'fits':fits,
+							'parameters':parameters,
+
+							'profiletype':profiletype,
+							'det':det,
+							'typ':typ,
+	
+							'totalfit_double':totalfit_double,
+							'systemicfit_double':systemicfit_double,
+							'outflowfit_double':outflowfit_double,
+							'params_double':params_double,
+							'params_double_err':params_double_err,
+							
 							'He_b':He_width}
 
 				catalog_new[binning] = nadfitcat
 		if (save==True):
 			print('Saving...')
 			if (sn_limit != None) & (adaptive == True):
-				pickle.dump(catalog_new, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_nadfit_'+name+'_'+dimension+'Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
+				pickle.dump(catalog_new, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_nadfit_'+name+'_'+dimension+'Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
 			else:
-				pickle.dump(catalog_new, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_nadfit_'+name+'_'+dimension+'D_'+samp+'_'+galtype+'.p', 'wb'))
+				pickle.dump(catalog_new, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_nadfit_'+name+'_'+dimension+'D_'+samp+'_'+galtype+'.p', 'wb'))
 			return catalog_new
 		else:
 			return catalog_new
@@ -795,7 +885,7 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 
 
 class Fitting():
-	def __init__(self, name, samp, galtype, save=False, sn_limit=None, adaptive=False, dimension=None):
+	def __init__(self, name, samp, galtype, save=False, sn_limit=None, adaptive=False, dimension='2'):
 		nadcatalogall = nadfit_process(name, samp, galtype, save=save, sn_limit=sn_limit, adaptive=adaptive, dimension=dimension)
 		self.catalog = nadcatalogall
 

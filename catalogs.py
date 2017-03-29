@@ -11,7 +11,7 @@ import pickle
 
 def call_maincatalog(samp, galtype, option=None, highsfrd=False, sort=False, sortbin=None):
 	# Add '_metal' to the end of the next line for the mass-metallicity relation stack
-	path = '/Users/guidorb/GoogleDrive/MPA-JHU/MPA-JHU_catalog_DR7_'+samp+'_'+galtype+'.p'
+	path = '/Users/guidorb/Dropbox/MPA-JHU/MPA-JHU_catalog_DR7_'+samp+'_'+galtype+'.p'
 	if (highsfrd is True) & (sort is False):
 		sdss_cat_first = pickle.load(open(path, "rb"), encoding='latin1')
 		cat = dict([key, sdss_cat_first[key][(sdss_cat_first['sn_ratio'] > 2.) & (sdss_cat_first['sfr_density'] > 0.1)]] for key in sdss_cat_first.keys())
@@ -33,9 +33,9 @@ def call_maincatalog(samp, galtype, option=None, highsfrd=False, sort=False, sor
 
 def call_savedcatalog(name, samp, galtype, codepart, sn_limit=None, adaptive=None, dimension=None):
 	if (sn_limit is not None) & (adaptive is True):
-		path = '/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_'+codepart+'_'+name+'_'+dimension+'Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p'
+		path = '/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_'+codepart+'_'+name+'_'+dimension+'Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p'
 	else:
-		path = '/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_'+codepart+'_'+name+'_'+dimension+'D_'+samp+'_'+galtype+'.p'
+		path = '/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_'+codepart+'_'+name+'_'+dimension+'D_'+samp+'_'+galtype+'.p'
 	cat = pickle.load(open(path, "rb"), encoding='latin1')
 	return cat
 

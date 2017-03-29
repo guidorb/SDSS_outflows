@@ -151,7 +151,7 @@ def get_bins(samp, galtype, xstring, ystring, plot=False, saveplot=False, option
 		axarr[1].hlines(xcdf_pc,[-4],xbin,linestyle='--')
 		axarr[1].plot(xbin,xcdf_pc, 'or')
 		if (saveplot==True):
-			plt.savefig('/Users/guidorb/GoogleDrive/SDSS/figs/bins_'+xstring+'v'+ystring+'_'+galtype+'.pdf')
+			plt.savefig('/Users/guidorb/Dropbox/SDSS/figs/bins_'+xstring+'v'+ystring+'_'+galtype+'.pdf')
 		plt.show()
 	return xbinfinal, ybinfinal
 
@@ -257,7 +257,7 @@ def get_bins_2Dadaptive(samp, galtype, xstring, ystring, plot=False, saveplot=Fa
 			axarr[1].vlines(binfinal,[0],cdf_pc,linestyle='--')
 		
 		if (saveplot==True):
-			plt.savefig('/Users/guidorb/GoogleDrive/SDSS/figs/bins_'+xstring+'v'+ystring+'_'+galtype+'.pdf')
+			plt.savefig('/Users/guidorb/Dropbox/SDSS/figs/bins_'+xstring+'v'+ystring+'_'+galtype+'.pdf')
 		plt.show()
 	return binfinal
 
@@ -556,14 +556,14 @@ def stacking_1d(name, samp, galtype, sn_limit, sort=False, sortbin=None, highsfr
 			if (nstackstop == ibin):
 				catalog['bins'] = np.array(bins)
 				if save==True:
-					pickle.dump(catalog, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_1D_'+samp+'_'+galtype+'.p', 'wb'))
+					pickle.dump(catalog, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_1D_'+samp+'_'+galtype+'.p', 'wb'))
 				break
 				return catalog
 
 	catalog['bins'] = np.array(bins)
 	os.system('echo "Yo, your script is done! Get back to work, peasant." | mail -s "STACKING JOB DONE" "guidorb@star.ucl.ac.uk"')
 	if save==True:
-		pickle.dump(catalog, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_1D_'+samp+'_'+galtype+'.p', 'wb'))
+		pickle.dump(catalog, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_1D_'+samp+'_'+galtype+'.p', 'wb'))
 	return catalog
 
 
@@ -910,7 +910,7 @@ def stacking_2d(name, samp, galtype, xbinned, ybinned, sn_limit, highsfrd=False,
 							catalog['xbins'] = xbins
 							catalog['ybins'] = ybins
 							if save==True:
-								pickle.dump(catalog, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2D_'+samp+'_'+galtype+'.p', 'wb'))
+								pickle.dump(catalog, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2D_'+samp+'_'+galtype+'.p', 'wb'))
 							break
 							return catalog
 				
@@ -920,7 +920,7 @@ def stacking_2d(name, samp, galtype, xbinned, ybinned, sn_limit, highsfrd=False,
 	# os.system('echo "Yo, your script is done! Get back to work, peasant." | mail -s "STACKING JOB DONE" "guidorb@star.ucl.ac.uk"')
 	if save==True:
 		print('Saving..')
-		pickle.dump(catalog, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2D_'+samp+'_'+galtype+'.p', 'wb'))
+		pickle.dump(catalog, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2D_'+samp+'_'+galtype+'.p', 'wb'))
 	return catalog
 
 
@@ -1283,7 +1283,7 @@ def stacking_2d_adaptive(name, samp, galtype, xbinned, ybinned, sn_limit, sortbi
 							catalog['xbins'] = b
 							catalog['ybins'] = b
 							if save==True:
-								pickle.dump(catalog, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
+								pickle.dump(catalog, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
 							break
 							return catalog
 		
@@ -1293,7 +1293,7 @@ def stacking_2d_adaptive(name, samp, galtype, xbinned, ybinned, sn_limit, sortbi
 		# os.system('echo "Yo, your script is done! Get back to work, peasant." | mail -s "STACKING JOB DONE" "guidorb@star.ucl.ac.uk"')
 		if save==True:
 			print('Saving..')
-			pickle.dump(catalog, open('/Users/guidorb/GoogleDrive/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
+			pickle.dump(catalog, open('/Users/guidorb/Dropbox/SDSS/stacked/SDSSstackcatalog_stack_'+name+'_2Dadaptive_SN'+str(sn_limit)+'_'+samp+'_'+galtype+'.p', 'wb'))
 	return catalog
 
 

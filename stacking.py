@@ -279,8 +279,8 @@ def plot_wbins(samp, galtype, xstring, ystring, xbins, ybins, secondgaltype=None
 			ax.hlines(ybins[i][j+1], xbins[i], xbins[i+1], linestyle='-', linewidth=1.75)
 	ax.set_xlim(min(xbins), max(xbins))
 	ax.set_ylim(min(ybins.flatten()), max(ybins.flatten()))
-	ax.set_xlabel(xstring, fontproperties=font)
-	ax.set_ylabel(ystring, fontproperties=font)
+	ax.set_xlabel(xstring)
+	ax.set_ylabel(ystring)
 	plt.show()
 	return
 

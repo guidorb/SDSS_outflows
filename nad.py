@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pickle
 import scipy
 import pymultinest
+from scipy.optimize import curve_fit
 from . import catalogs as cts
 
 
@@ -17,6 +18,23 @@ nad_b = 5889.951
 nad_r = 5895.924
 hei = 5875.67
 c = 3.e5
+
+def polyfit(wav, gradient, c):
+    poly = (gradient*wav+c)
+    return poly
+
+def remove_nad_baseline(wav, res):
+	x1 = wav.min()
+	x2 = 5875.
+	x3 = 5905.
+	x4 = wav.max()
+	wav_test = wav[((wav >= x1) & (wav <= x2)) | ((wav >= x3) & (wav <= x4))]
+	flux_test = res[((wav >= x1) & (wav <= x2)) | ((wav >= x3) & (wav <= x4))]
+
+	pop1, cov1 = curve_fit(polyfit, wav_test, flux_test, [0.1, 0.99])
+	fit = polyfit(wav, *pop1)
+	new_res = res/fit
+	return new_res
 
 
 def NaDprofile(wav, cube, profile=None):
@@ -261,10 +279,11 @@ def determine_profile(catalog_cont=None):
 	res_err = errors/model
 	selection = np.where((wav0 >= 5860.0) & (wav0 <= 5920.0))[0]
 	wavf = np.array(wav0[selection[0]:selection[-1]].copy())
-	resf = np.array(res[selection[0]:selection[-1]].copy())
+	resf_temp = np.array(res[selection[0]:selection[-1]].copy())
 	errf = np.array(res_err[selection[0]:selection[-1]].copy())
 	modelf = np.array(model[selection[0]:selection[-1]].copy())
 	stackf = np.array(stack[selection[0]:selection[-1]].copy())
+	resf = remove_nad_baseline(wavf, resf_temp)
 
 	# Define the priors for 1-component fitting
 	## Single, priors
@@ -639,11 +658,12 @@ def nadfit_process(name, samp, galtype, save=False, sn_limit=None, adaptive=Fals
 		
 				selection = np.where((wav0 >= 5860.0) & (wav0 <= 5920.0))[0]
 				wavf = np.array(wav0[selection[0]:selection[-1]].copy())
-				resf = np.array(res[selection[0]:selection[-1]].copy())
+				resf_temp = np.array(res[selection[0]:selection[-1]].copy())
 				errf = np.array(res_err[selection[0]:selection[-1]].copy())
 				modelf = np.array(model[selection[0]:selection[-1]].copy())
 				stackf = np.array(stack[selection[0]:selection[-1]].copy())	
 				He_width = np.sqrt(2.)*(catalog[binning]['CB08_params'][81]/nad_r)*c
+				resf = remove_nad_baseline(wavf, resf_temp)
 
 				if (profiletype=='absorption') & (det==True):
 					## Double, priors
@@ -888,4 +908,52 @@ class Fitting():
 	def __init__(self, name, samp, galtype, save=False, sn_limit=None, adaptive=False, dimension='2'):
 		nadcatalogall = nadfit_process(name, samp, galtype, save=save, sn_limit=sn_limit, adaptive=adaptive, dimension=dimension)
 		self.catalog = nadcatalogall
+
+
+def analyse(catalog_stack=None, catalog_nad=None, name=None):
+	# priors_double = [tau0_sys, b_sys, Cf_flow, tau0_flow, b_flow, offset_flow]
+
+	## Equivalent width: ##
+	EW = (1-catalog_nad[name]['totalfit_double']).sum()
+
+	## Maximum velocity and centroid velocity: ##
+	## vmax from Eq. 7 from Sughara+2017
+	vmax = (c*(catalog_nad[name]['params_double'][-1]/nad_r)) - (catalog_nad[name]['params_double'][4] / np.sqrt(2.))
+	vmax_err = (c*(catalog_nad[name]['params_double_err'][-1]/nad_r)) - (catalog_nad[name]['params_double_err'][4] / np.sqrt(2.))
+	# lammax = catalog_nad[name]['params_double'][-1] - (catalog_nad[name]['params_double'][-1] * (catalog_nad[name]['params_double'][4]/c) * np.sqrt(-np.log((1./catalog_nad[name]['params_double'][3])*np.log(1./0.9))))
+	# lammax_err = catalog_nad[name]['params_double_err'][-1] - (catalog_nad[name]['params_double_err'][-1] * (catalog_nad[name]['params_double_err'][4]/c) * np.sqrt(-np.log((1./catalog_nad[name]['params_double_err'][3])*np.log(1./0.9))))
+	# vmax = abs(c*(lammax/nad_r))
+	# vmax_err = abs(c*(lammax_err/nad_r))
+	dv = c*(catalog_nad[name]['params_double'][-1]/nad_r)
+	dv_err = c*(catalog_nad[name]['params_double_err'][-1]/nad_r)
+
+	## dM/dt and mass loading factor (from Sugahara+2017): ##
+	# Calculate N(NaI) (Eq.11)
+	a = (catalog_nad[name]['params_double'][3]*catalog_nad[name]['params_double'][4])
+	lam1 = 5897.55
+	f1 = 0.3180
+	N_NaD = a/((1.497e-15)*lam1*f1)
+
+	# Convert to N(H) (Eq.13)
+	# N_H = (N_NaD/0.1)*10**(-(-5.69-0.96))
+	X_nad = 0.1
+	d_nad = 0.1
+	miu_nad = 2.1e-6
+	N_H = N_NaD / (X_nad * d_nad * miu_nad)
+
+	# Calculate dM, assuming radius of 5kpc
+	# dM = 11.5 * abs(catalog_nad[name]['params_double'][3]) * 0.5 * (N_H/(1e21)) * (abs(dv)/200.)
+	dM = 22. * abs(catalog_nad[name]['params_double'][2]) * (N_H / 10**22.) * (abs(dv)/300.)
+
+	# Mass-loading factor
+	mloadfac = dM/catalog_stack[name]['median_properties']['median_totsfr']
+	
+	# halo mass
+	M1_z = 11.590 + 1.195*(catalog_stack[name]['median_properties']['median_z']/(catalog_stack[name]['median_properties']['median_z']+1))
+	N_z = 0.0351 + (-0.0247)*(catalog_stack[name]['median_properties']['median_z']/(catalog_stack[name]['median_properties']['median_z']+1))
+	Beta_z = 1.376 + (-0.826)*(catalog_stack[name]['median_properties']['median_z']/(catalog_stack[name]['median_properties']['median_z']+1))
+	Gamma_z = 0.608 + 0.329*(catalog_stack[name]['median_properties']['median_z']/(catalog_stack[name]['median_properties']['median_z']+1))
+
+	catalog = {'vmax':vmax, 'vmax_err':vmax_err, 'dv':dv, 'dv_err':dv_err, 'N_NaD':N_NaD, 'N_H':N_H, 'dM':dM, 'massloading':mloadfac, 'EW':EW}
+	return catalog
 
